@@ -98,19 +98,26 @@ jobs:
         env:
           INSTANCE_IP: ${{ secrets.INSTANCE_IP }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
         run: |
           echo "$SSH_PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
           
           ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@$INSTANCE_IP << EOF
             # Export AWS environment variables for the session
-            export AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
+            export AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+            export AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
             export AWS_REGION=${AWS_REGION}
-            
-            # Login to AWS ECR
+            export AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
+      
+            # AWS ECR login using get-login-password
             aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+      
+            # Verify docker login (optional but useful for debugging)
+            docker info
             
             # Ensure docker-compose.yml is in the correct directory
             cd /home/ubuntu
@@ -124,4 +131,5 @@ jobs:
           EOF
       
           rm -f private_key.pem
+
 

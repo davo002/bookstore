@@ -104,13 +104,22 @@ jobs:
           echo "$SSH_PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
           
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@$INSTANCE_IP << 'EOF'
-            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ubuntu@$INSTANCE_IP << EOF
+            # Export AWS environment variables for the session
             export AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}
             export AWS_REGION=${AWS_REGION}
+            
+            # Login to AWS ECR
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+            
+            # Ensure docker-compose.yml is in the correct directory
             cd /home/ubuntu
+            
+            # Bring down any existing containers and pull the latest images
             docker-compose down
             docker-compose pull
+      
+            # Start the services in the background
             docker-compose up -d
           EOF
       

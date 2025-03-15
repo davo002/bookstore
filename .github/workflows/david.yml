@@ -83,3 +83,14 @@ jobs:
             docker tag bookstore_$REPO:latest $IMAGE_NAME
             docker push $IMAGE_NAME
           done
+
+      # Copy docker-compose.yml to the instance
+      - name: Copy docker-compose.yml to instance
+        env:
+          INSTANCE_IP: ${{ secrets.INSTANCE_IP }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "$SSH_PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+          scp -o StrictHostKeyChecking=no -i private_key.pem docker-compose.yml ubuntu@$INSTANCE_IP:/home/ubuntu/
+          rm -f private_key.pem

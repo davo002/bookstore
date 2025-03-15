@@ -1,22 +1,48 @@
 services:
   server:
-    restart: always
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/server:latest
     container_name: bookstore_server
-    volumes:
-      - /app/node_modules
-      - ./server:/app
+    # Assuming the server listens on port 5000 internally
+    ports:
+      - "5000:5000"  # Optional: publish if needed externally
+    networks:
+      bookstore_network:
+        aliases:
+          - server
     environment:
       - POSTGRES_URL=postgresql://postgres:postgres@db:5432/bookstore
+
+  client:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/client:latest
+    container_name: bookstore_client
+    # Assuming the client listens on port 3000 internally
+    ports:
+      - "3000:3000"  # Optional: publish if needed externally
+    networks:
+      bookstore_network:
+        aliases:
+          - client
     depends_on:
-      - db
+      - server
+
+  nginx:
+    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/nginx:latest
+    container_name: bookstore_nginx
+    ports:
+      - "8080:80"
     networks:
       - bookstore_network
+    depends_on:
+      - server
+      - client
 
   db:
     image: postgres:13-alpine
-    restart: always
     container_name: bookstore_db
+    ports:
+      - "5432:5432"  # Optional: if you need external access
+    networks:
+      - bookstore_network
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -24,32 +50,6 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./migrations:/docker-entrypoint-initdb.d
-    networks:
-      - bookstore_network
-
-  client:
-    restart: always
-    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/client:latest
-    container_name: bookstore_client
-    volumes:
-      - /app/node_modules
-      - ./client:/app
-    depends_on:
-      - server
-    networks:
-      - bookstore_network
-
-  nginx:
-    restart: always
-    depends_on:
-      - server
-      - client
-    image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/nginx:latest
-    container_name: bookstore_nginx
-    ports:
-      - 8080:80
-    networks:
-      - bookstore_network
 
 networks:
   bookstore_network:
